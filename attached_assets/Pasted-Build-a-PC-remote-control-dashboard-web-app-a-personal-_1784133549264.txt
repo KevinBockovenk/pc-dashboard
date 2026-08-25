@@ -1,0 +1,70 @@
+Build a PC remote control dashboard web app — a personal tool that lets you monitor and control your Windows PCs from a browser. Think mission control for your home setup: you can see all your connected PCs at a glance, run commands, take screenshots, and manage them without touching them.
+
+Product identity: A sleek, focused control panel for power users who want to reach any PC on their network from anywhere. It should feel like a tool built for someone who loves their setup — precise, dark, and satisfying to use.
+
+Vibe: Dense and confident, like a developer tool or system monitor. Everything visible at once, nothing hidden behind menus. The kind of app that makes you feel in control the moment you open it.
+
+## Pages
+
+- `/` — Single-page dashboard. Left sidebar lists connected PCs with live status. Main area shows the selected PC's command interface, output, and controls. No separate routes needed — it's one focused surface.
+
+## Data types
+
+```ts
+interface PcInfo {
+  name: string;        // unique identifier / display name
+  hostname: string;    // system hostname
+  platform: string;    // e.g. "Windows"
+  connectedAt: string; // ISO date
+}
+
+interface PcCommandResult {
+  success: boolean;
+  data: string | null;    // text output
+  image: string | null;   // base64 PNG for screenshots
+  error: string | null;
+}
+```
+
+## Available API hooks (use ALL of them)
+
+```
+useListPcs(options?)                          // GET /api/pcs → { pcs: PcInfo[] }
+getListPcsQueryKey()                          // for cache invalidation
+useSendPcCommand(options?)                    // POST /api/pcs/{pcName}/command → PcCommandResult
+```
+
+Hook usage notes:
+- Import from `@workspace/api-client-react`, never relative paths
+- `useSendPcCommand` is a mutation: `useSendPcCommand()`, called with `mutate({ pcName, data: { cmd, args } })`
+- `useListPcs` is a query — poll every 3 seconds using `refetchInterval: 3000` to keep the PC list live
+- Query hook options: `useListPcs({ query: { refetchInterval: 3000 } })`
+
+## Functional requirements
+
+The main interface (after selecting a PC) must support all of these:
+- **System info** — show CPU, RAM, disk, uptime (text output, pre-formatted)
+- **Screenshot** — display the screenshot inline in the UI as an image
+- **PowerShell command input** — text input + run button, shows stdout/stderr in a monospace output pane that accumulates history
+- **Quick action buttons** — Mute, Unmute, Processes (shows list in output pane)
+- **Volume control** — a slider or input for 0-100, send volume_set command
+- **Clipboard** — a "Get" button that shows current clipboard contents, a text input + "Set" button
+- **Power controls** — Shutdown, Restart, Sleep buttons (with confirmation, since these are destructive)
+- **Open file/app** — text input + open button (sends the `open` command)
+- **Kill process** — text input + kill button
+
+When no PCs are connected, show a helpful empty state with setup instructions (paste the server WebSocket URL from `window.location` so they know what to put in pc_agent.py).
+
+When output is loading (waiting for PC response), show a clear loading indicator.
+
+## Technical notes
+- cmd mapping: `{ cmd: "sysinfo" | "screenshot" | "cmd" | "open" | "shutdown" | "restart" | "sleep" | "clipboard_get" | "clipboard_set" | "volume_set" | "mute" | "unmute" | "processes" | "kill_process", args?: object }`
+- For `cmd` command: args = `{ command: string }`
+- For `open`: args = `{ path: string }`
+- For `clipboard_set`: args = `{ text: string }`
+- For `volume_set`: args = `{ level: number }`
+- For `kill_process`: args = `{ name: string }`
+- Do not use emojis anywhere in the UI
+- Do not screenshot or verify your work — the app is not running during the build
+
+Prioritize clarity and polish — this is a tool someone will use for hours. Reward that with thoughtful details. Dense but organized, not sparse. Make it feel like a product someone chose, not a tool they were assigned.

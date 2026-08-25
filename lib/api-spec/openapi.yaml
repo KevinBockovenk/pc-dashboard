@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: PC Remote Control Dashboard API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: pcs
+    description: PC management and control
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /pcs:
+    get:
+      operationId: listPcs
+      tags: [pcs]
+      summary: List connected PCs
+      description: Returns all currently connected PCs
+      responses:
+        "200":
+          description: List of connected PCs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PcListResponse"
+
+  /pcs/{pcName}/command:
+    post:
+      operationId: sendPcCommand
+      tags: [pcs]
+      summary: Send a command to a PC
+      description: Sends a command to the specified PC and returns the result
+      parameters:
+        - name: pcName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PcCommandInput"
+      responses:
+        "200":
+          description: Command result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PcCommandResult"
+        "404":
+          description: PC not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "408":
+          description: Command timed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    PcInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        hostname:
+          type: string
+        platform:
+          type: string
+        connectedAt:
+          type: string
+      required:
+        - name
+        - hostname
+        - platform
+        - connectedAt
+
+    PcListResponse:
+      type: object
+      properties:
+        pcs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PcInfo"
+      required:
+        - pcs
+
+    PcCommandInput:
+      type: object
+      properties:
+        cmd:
+          type: string
+          enum:
+            - sysinfo
+            - screenshot
+            - cmd
+            - open
+            - shutdown
+            - restart
+            - sleep
+            - clipboard_get
+            - clipboard_set
+            - volume_set
+            - mute
+            - unmute
+            - processes
+            - kill_process
+            - disconnect
+            - fs_list_drives
+            - fs_list_dir
+            - fs_move
+            - fs_delete
+            - fs_rename
+            - fs_read_file
+            - fs_write_file
+            - fs_create_file
+            - fs_upload_file
+            - fs_download_file
+            - fs_zip_dir
+            - fs_file_info
+            - fs_read_chunk
+        args:
+          type: object
+          additionalProperties: true
+      required:
+        - cmd
+
+    PcCommandResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: ["string", "null"]
+        image:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+      required:
+        - success
+        - data
+        - image
+        - error
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
